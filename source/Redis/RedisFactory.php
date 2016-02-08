@@ -25,16 +25,48 @@ use InvalidArgumentException;
  */
 final class RedisFactory {
     /**
+     * @var Connection[] $ConnectionsPool pool of connections
+     */
+    private static $ConnectionsPool = [];
+
+    /**
+     * Get connection from pool by array config
+     * @param array $config
+     * @return Connection
+     */
+    private static function getConnection(array $config) {
+        $key = self::getConnectionKeyName($config['host'], $config['port']);
+
+        if (!isset(self::$ConnectionsPool[$key])) {
+            $Redis = new Connection();
+            $Redis->setHost($config['host']);
+            $Redis->setPort($config['port']);
+            (isset($config['connect_timeout'])) && $Redis->setConnectTimeout($config['connect_timeout']);
+            (isset($config['connect_tries']))   && $Redis->setConnectTries($config['connect_tries']);
+            self::$ConnectionsPool[$key] = $Redis;
+        }
+
+        return self::$ConnectionsPool[$key];
+    }
+
+    /**
+     * Get connection name by host and port
+     * @param string $host
+     * @param int $port
+     * @return string
+     */
+    private static function getConnectionKeyName($host, $port) {
+        $name = $host . ':' . $port;
+        return $name;
+    }
+
+    /**
      * Create PhpRedis instance by array config
      * @param array $config array configuration
+     * @return Connection
      * @throws InvalidArgumentException
      */
     public static function createRedisByConfig(array $config) {
-        $Redis = new Connection();
-        $Redis->setHost(@$config['host'])
-            ->setPort(@$config['port']);
-        (isset($config['connect_timeout'])) && $Redis->setConnectTimeout($config['connect_timeout']);
-        (isset($config['connect_tries']))   && $Redis->setConnectTries($config['connect_tries']);
-        return $Redis;
+        return self::getConnection($config);
     }
 }
